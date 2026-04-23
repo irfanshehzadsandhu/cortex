@@ -41,5 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # app data (uploads + vector DB)
-/data/uploads/
-/data/lancedb/
+/data/uploads/*
+/data/lancedb/*
+!/data/uploads/.gitkeep
+!/data/lancedb/.gitkeep
