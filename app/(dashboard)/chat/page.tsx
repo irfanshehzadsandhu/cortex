@@ -37,7 +37,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="border-b px-6 py-4">
         <h1 className="text-lg font-semibold">Chat</h1>
         <p className="text-xs text-muted-foreground">Ask questions about your uploaded documents.</p>

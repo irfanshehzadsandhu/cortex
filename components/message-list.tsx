@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SourceCitations } from './source-citations';
 import type { Citation } from '@/src/types';
@@ -14,8 +17,14 @@ interface Props {
 }
 
 export function MessageList({ messages, loading }: Props) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
   return (
-    <ScrollArea className="flex-1 px-4 py-3">
+    <ScrollArea className="flex-1 min-h-0 px-4 py-3">
       <div className="flex flex-col gap-4 max-w-2xl mx-auto">
         {messages.length === 0 && (
           <p className="text-center text-muted-foreground text-sm mt-16">
@@ -48,6 +57,7 @@ export function MessageList({ messages, loading }: Props) {
             </div>
           </div>
         )}
+        <div ref={bottomRef} />
       </div>
     </ScrollArea>
   );
