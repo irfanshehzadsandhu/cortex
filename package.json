@@ -9,8 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.90.0",
     "@base-ui/react": "^1.4.1",
+    "@huggingface/inference": "^4.13.15",
     "@lancedb/lancedb": "^0.27.2",
     "@langchain/textsplitters": "^1.0.1",
     "@types/pdf-parse": "^1.1.5",

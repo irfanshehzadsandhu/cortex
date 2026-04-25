@@ -65,7 +65,7 @@ export async function similaritySearch(
   documentIds?: string[]
 ): Promise<RetrievalResult[]> {
   const table = await getTable();
-  let query = table.vectorSearch(queryVector).distanceType('cosine').limit(topK).select(['id', 'documentId', 'text', 'filename', 'pageNumber', 'chunkIndex']);
+  let query = table.vectorSearch(queryVector).distanceType('cosine').limit(topK).select(['id', 'documentId', 'text', 'filename', 'pageNumber', 'chunkIndex', '_distance']);
 
   if (documentIds && documentIds.length > 0) {
     const ids = documentIds.map((id) => `'${id}'`).join(', ');
