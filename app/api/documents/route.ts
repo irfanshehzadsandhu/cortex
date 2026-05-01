@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listDocuments, deleteDocument } from '../../../src/lib/document-store';
-import { deleteDocumentChunks } from '../../../src/lib/rag/vector-store';
+
+export const runtime = 'nodejs';
 
 export async function GET() {
   return NextResponse.json(listDocuments());
@@ -14,6 +15,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Missing document id' }, { status: 400 });
   }
 
+  const { deleteDocumentChunks } = await import('../../../src/lib/rag/vector-store');
   await deleteDocumentChunks(id);
   const deleted = deleteDocument(id);
 
