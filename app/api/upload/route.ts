@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const documentId = uuidv4();
 
-    saveDocument({
+    await saveDocument({
       id: documentId,
       filename,
       uploadedAt: new Date(),
@@ -56,14 +56,14 @@ export async function POST(req: NextRequest) {
 
         await upsertChunks(embeddedChunks);
 
-        updateDocument(documentId, {
+        await updateDocument(documentId, {
           pageCount: parsed.pageCount,
           chunkCount: chunks.length,
           status: 'ready',
         });
       } catch (err) {
         console.error('[upload] processing failed', err);
-        updateDocument(documentId, { status: 'failed' });
+        await updateDocument(documentId, { status: 'failed' });
       }
     });
 

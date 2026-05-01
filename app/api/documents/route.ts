@@ -4,7 +4,8 @@ import { listDocuments, deleteDocument } from '../../../src/lib/document-store';
 export const runtime = 'nodejs';
 
 export async function GET() {
-  return NextResponse.json(listDocuments());
+  const docs = await listDocuments();
+  return NextResponse.json(docs);
 }
 
 export async function DELETE(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function DELETE(req: NextRequest) {
 
   const { deleteDocumentChunks } = await import('../../../src/lib/rag/vector-store');
   await deleteDocumentChunks(id);
-  const deleted = deleteDocument(id);
+  const deleted = await deleteDocument(id);
 
   if (!deleted) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 });
