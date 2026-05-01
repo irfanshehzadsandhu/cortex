@@ -3,7 +3,12 @@ import { makeArrowTable } from '@lancedb/lancedb';
 import path from 'path';
 import type { Chunk, RetrievalResult } from '../../types';
 
-const DB_PATH = path.resolve(process.cwd(), 'data/lancedb');
+/** Vercel serverless only allows writing under `/tmp`; local dev uses `data/lancedb`. */
+const DB_PATH =
+  process.env.LANCEDB_PATH ??
+  (process.env.VERCEL
+    ? path.join(process.env.TMPDIR ?? '/tmp', 'cortex-lancedb')
+    : path.resolve(process.cwd(), 'data/lancedb'));
 const TABLE_NAME = 'chunks';
 const EMBEDDING_DIM = 384;
 

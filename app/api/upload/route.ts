@@ -19,11 +19,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Only PDF files are supported' }, { status: 400 });
   }
 
+  // Must read the body before returning the response. On serverless (e.g. Vercel), ending the
+  // response can close the request stream; reading `file.arrayBuffer()` afterward fails or races.
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const filename = file.name;
+
   const documentId = uuidv4();
 
   saveDocument({
     id: documentId,
-    filename: file.name,
+    filename,
     uploadedAt: new Date(),
     pageCount: 0,
     chunkCount: 0,
@@ -31,10 +36,9 @@ export async function POST(req: NextRequest) {
   });
 
   // Process in the background so we can return immediately
-  (async () => {
+  void (async () => {
     try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const parsed = await parsePDF(buffer, file.name);
+      const parsed = await parsePDF(buffer, filename);
 
       const chunks = await chunkDocument(parsed, documentId);
 
