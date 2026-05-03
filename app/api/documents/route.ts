@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { listDocuments, deleteDocument } from '../../../src/lib/document-store';
+import {
+  deleteDocument,
+  getDocumentStorageBackend,
+  listDocuments,
+} from '../../../src/lib/document-store';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const docs = await listDocuments();
-  return NextResponse.json(docs);
+  const res = NextResponse.json(docs);
+  res.headers.set('X-Cortex-Document-Backend', getDocumentStorageBackend());
+  res.headers.set('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+  return res;
 }
 
 export async function DELETE(req: NextRequest) {

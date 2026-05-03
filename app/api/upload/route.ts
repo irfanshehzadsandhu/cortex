@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { saveDocument, updateDocument } from '../../../src/lib/document-store';
+import {
+  getDocumentStorageBackend,
+  saveDocument,
+  updateDocument,
+} from '../../../src/lib/document-store';
 import type { Chunk } from '../../../src/types';
 
 export const runtime = 'nodejs';
@@ -67,7 +71,9 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({ documentId, status: 'processing' }, { status: 202 });
+    const res = NextResponse.json({ documentId, status: 'processing' }, { status: 202 });
+    res.headers.set('X-Cortex-Document-Backend', getDocumentStorageBackend());
+    return res;
   } catch (err) {
     console.error('[upload] request failed', err);
     return NextResponse.json(

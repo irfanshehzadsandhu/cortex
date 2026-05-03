@@ -2,6 +2,14 @@
 
 Cortex is a Next.js-based Retrieval-Augmented Generation (RAG) app that lets you upload PDF documents and ask questions grounded in their contents.
 
+## Node.js version
+
+This repo targets **Node.js v23.11.0** (see `.nvmrc`). With [nvm](https://github.com/nvm-sh/nvm):
+
+```bash
+nvm use
+```
+
 ## Features
 
 - Upload PDF files for ingestion
@@ -13,23 +21,23 @@ Cortex is a Next.js-based Retrieval-Augmented Generation (RAG) app that lets you
 ## Models Used
 
 - Generation model: `Qwen/Qwen2.5-7B-Instruct` (via Hugging Face Inference API)
-- Embedding model: `Xenova/all-MiniLM-L6-v2` (via `@xenova/transformers`)
+- Embeddings: `sentence-transformers/all-MiniLM-L6-v2` (via Hugging Face Inference API, 384-dim)
 
 ## Tech Stack
 
 - Framework: Next.js 16, React 19, TypeScript
-- Vector DB: LanceDB (`data/lancedb`)
+- Vector DB: LanceDB (local `data/lancedb`, or `/tmp` on Vercel)
 - PDF parsing: `pdf-parse`
 - Chunking: LangChain `RecursiveCharacterTextSplitter`
-- Embeddings: `@xenova/transformers`
-- LLM calls: `@huggingface/inference`
+- Embeddings & LLM: `@huggingface/inference`
+- Document metadata (Vercel / multi-instance): **Upstash Redis** via `@upstash/redis`
 
 ## How It Works
 
 1. User uploads a PDF via `/api/upload`
 2. Server parses PDF text page-by-page
 3. Text is chunked (`chunkSize: 512`, `chunkOverlap: 64`)
-4. Chunks are embedded and stored in LanceDB
+4. Chunks are embedded (HF API) and stored in LanceDB
 5. User submits a query via `/api/query`
 6. Query embedding retrieves top-k relevant chunks
 7. LLM generates grounded response from retrieved context
@@ -42,65 +50,54 @@ Cortex is a Next.js-based Retrieval-Augmented Generation (RAG) app that lets you
 - `app/api/query/route.ts`: RAG query endpoint
 - `app/api/documents/route.ts`: List/delete documents
 - `src/lib/rag/`: Parser, chunker, embedder, retriever, generator, vector store
-- `src/lib/document-store.ts`: In-memory document metadata
+- `src/lib/document-store.ts`: Document metadata (in-memory locally, **Upstash Redis** when env is set)
 
 ## Environment Variables
 
-Create a `.env.local` file:
+Copy `.env.example` to `.env.local` and fill in values:
 
 ```bash
-HUGGINGFACE_API_KEY=your_huggingface_token
+cp .env.example .env.local
 ```
 
-In Vercel, add the same variable in Project Settings -> Environment Variables.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `HUGGINGFACE_API_KEY` | Yes | Hugging Face token for embeddings + chat |
+| `UPSTASH_REDIS_REST_URL` | For Vercel / shared list | **HTTPS** REST URL only (`https://…upstash.io`). Do **not** use the `redis://…:6379` “Redis URL” from Upstash — that is for TCP clients, not `@upstash/redis`. |
+| `UPSTASH_REDIS_REST_TOKEN` | For Vercel / shared list | Same **REST API** panel as the URL (long token, not the password embedded in `redis://`) |
+| `HUGGINGFACE_EMBEDDING_MODEL` | No | Override embedding model (must stay 384-dim for current LanceDB schema) |
+
+Legacy `KV_REST_API_URL` / `KV_REST_API_TOKEN` are still read if the Upstash-prefixed vars are unset.
+
+On **Vercel**, add the same variables under Project → Settings → Environment Variables, then redeploy.
+
+## Upstash Redis (free tier)
+
+1. Sign up at [Upstash](https://upstash.com/) and create a **Redis** database (same region as Vercel helps latency).
+2. Open the database → **REST API** (not “Connect” / `redis://`) → copy the **https://** endpoint and the **REST token** into `.env.local` and Vercel.
+3. Redeploy. The documents list uses Redis so uploads appear regardless of which serverless instance handles the request.
 
 ## Local Development
 
 ```bash
+nvm use
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Without Upstash env vars, metadata stays in-memory (fine for a single local process).
 
 ## Deploying to Vercel
 
-### 1) Push repository to GitHub
+1. Push the repository to GitHub.
+2. Import the project at [vercel.com/new](https://vercel.com/new) (Next.js preset).
+3. Set `HUGGINGFACE_API_KEY`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN` for Production (and Preview if needed).
+4. Deploy.
 
-Commit and push your project.
+### Vercel runtime notes
 
-### 2) Import project in Vercel
-
-- Go to [https://vercel.com/new](https://vercel.com/new)
-- Import your GitHub repository
-- Framework preset should auto-detect as Next.js
-
-### 3) Configure environment variable
-
-Set:
-
-- `HUGGINGFACE_API_KEY`: Your Hugging Face token
-
-### 4) Deploy
-
-Trigger a deployment from Vercel or push to your production branch.
-
-## Important Vercel Runtime Notes
-
-This app currently uses:
-
-- In-memory document metadata store (`src/lib/document-store.ts`)
-- Local filesystem-backed LanceDB (`data/lancedb`)
-
-On Vercel serverless runtimes, these are ephemeral and not durable across invocations/deployments. That means uploaded documents/chunks may be lost and metadata will not be reliably shared.
-
-For production on Vercel, replace these with persistent services:
-
-- Metadata store: Postgres/Neon/Supabase/PlanetScale
-- Vector store: Pinecone/Qdrant/Weaviate/pgvector
-- File storage (if needed): Vercel Blob/S3/R2
-
-Without these changes, Vercel deployment is best treated as a demo/prototype.
+- **Document metadata** is durable across instances when Upstash env vars are set.
+- **LanceDB vectors** on Vercel use `/tmp` per instance and are ephemeral; chat retrieval may miss chunks if upload and query hit different instances. For a portfolio, low traffic often masks this; for reliable RAG on serverless, use a hosted vector DB (e.g. pgvector, Pinecone).
 
 ## API Endpoints
 
@@ -149,8 +146,7 @@ Response includes:
 
 ## Production Hardening Checklist
 
-- Move metadata from in-memory map to a persistent DB
-- Move vectors from local LanceDB to a managed vector DB
+- Move vectors from local LanceDB to a managed vector DB for reliable serverless RAG
 - Add auth/authorization for upload/query endpoints
 - Add upload limits and PDF validation safeguards
 - Add retry/queue for ingestion jobs

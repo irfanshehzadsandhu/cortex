@@ -9,10 +9,14 @@ import type { Document } from '@/src/types';
 
 export default function DocumentsPage() {
   const [docs, setDocs] = useState<Document[]>([]);
+  const [storageBackend, setStorageBackend] = useState<'redis' | 'memory' | null>(null);
 
   const refresh = useCallback(async () => {
-    const res = await fetch('/api/documents');
-    if (res.ok) setDocs(await res.json());
+    const res = await fetch('/api/documents', { cache: 'no-store' });
+    if (!res.ok) return;
+    setDocs(await res.json());
+    const b = res.headers.get('X-Cortex-Document-Backend');
+    if (b === 'redis' || b === 'memory') setStorageBackend(b);
   }, []);
 
   useEffect(() => {
@@ -22,7 +26,10 @@ export default function DocumentsPage() {
   }, [refresh]);
 
   const deleteDoc = async (id: string) => {
-    await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+    await fetch(`/api/documents?id=${id}`, {
+      method: 'DELETE',
+      cache: 'no-store',
+    });
     refresh();
   };
 
@@ -32,6 +39,32 @@ export default function DocumentsPage() {
         <h1 className="text-2xl font-bold mb-1">Documents</h1>
         <p className="text-sm text-muted-foreground">Upload PDFs to ask questions about them.</p>
       </div>
+
+      {storageBackend === 'memory' && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+          <p className="font-medium">Document list won’t sync on Vercel without Upstash Redis</p>
+          <p className="mt-1 text-xs opacity-90">
+            Metadata is only kept in this server’s memory. Create a free Redis database at{' '}
+            <a
+              href="https://console.upstash.com/"
+              className="underline font-medium"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Upstash
+            </a>
+            , copy the REST credentials into{' '}
+            <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px] dark:bg-white/10">
+              UPSTASH_REDIS_REST_URL
+            </code>{' '}
+            and{' '}
+            <code className="rounded bg-black/10 px-1 py-0.5 font-mono text-[11px] dark:bg-white/10">
+              UPSTASH_REDIS_REST_TOKEN
+            </code>{' '}
+            (see <code className="font-mono text-[11px]">.env.example</code>), then redeploy.
+          </p>
+        </div>
+      )}
 
       <UploadZone onUploadComplete={refresh} />
 
