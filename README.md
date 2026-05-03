@@ -4,9 +4,10 @@ Cortex is a Next.js-based Retrieval-Augmented Generation (RAG) app that lets you
 
 ## Node.js version
 
-This repo targets **Node.js v23.11.0** (see `.nvmrc`). With [nvm](https://github.com/nvm-sh/nvm):
+This repo targets **Node.js 24.x** (see `.nvmrc` and `package.json` → `engines`). With [nvm](https://github.com/nvm-sh/nvm):
 
 ```bash
+nvm install   # if you don’t have 24.x yet
 nvm use
 ```
 
