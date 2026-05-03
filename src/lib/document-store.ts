@@ -73,11 +73,13 @@ function parseStoredDocument(raw: unknown): Document {
   }
   const parsed =
     typeof raw === 'string'
-      ? (JSON.parse(raw) as Omit<Document, 'uploadedAt'> & { uploadedAt: string })
-      : (raw as Omit<Document, 'uploadedAt'> & { uploadedAt: string });
+      ? (JSON.parse(raw) as Omit<Document, 'uploadedAt'> & { uploadedAt: string; errorMessage?: string })
+      : (raw as Omit<Document, 'uploadedAt'> & { uploadedAt: string; errorMessage?: string });
+  const err = parsed.errorMessage;
   return {
     ...parsed,
     uploadedAt: new Date(parsed.uploadedAt),
+    ...(typeof err === 'string' && err.length > 0 ? { errorMessage: err } : {}),
   };
 }
 

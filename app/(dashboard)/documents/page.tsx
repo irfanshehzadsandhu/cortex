@@ -77,6 +77,11 @@ export default function DocumentsPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {doc.pageCount} pages · {doc.chunkCount} chunks
                 </p>
+                {doc.status === 'failed' && doc.errorMessage && (
+                  <p className="text-xs text-destructive mt-2 break-words whitespace-pre-wrap">
+                    {doc.errorMessage}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge

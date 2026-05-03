@@ -25,7 +25,17 @@ export function UploadZone({ onUploadComplete }: Props) {
         const form = new FormData();
         form.append('file', file);
         const res = await fetch('/api/upload', { method: 'POST', body: form });
-        if (!res.ok) throw new Error((await res.json()).error ?? 'Upload failed');
+        const data = (await res.json()) as {
+          error?: string;
+          message?: string;
+          status?: string;
+        };
+        if (!res.ok) {
+          throw new Error(data.error ?? data.message ?? 'Upload failed');
+        }
+        if (data.status === 'failed' && data.error) {
+          throw new Error(data.error);
+        }
         onUploadComplete();
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Upload failed');

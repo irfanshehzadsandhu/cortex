@@ -106,11 +106,19 @@ Open [http://localhost:3000](http://localhost:3000). Without Upstash env vars, m
 
 Upload PDF as `multipart/form-data` with `file`.
 
-Response:
+Response (HTTP 200 after ingestion finishes on the server):
 
 ```json
-{ "documentId": "...", "status": "processing" }
+{ "documentId": "...", "status": "ready" }
 ```
+
+If ingestion fails (PDF parse, Hugging Face API, LanceDB, etc.):
+
+```json
+{ "documentId": "...", "status": "failed", "error": "…message…" }
+```
+
+The same error is stored on the document as `errorMessage` for the list UI. On Vercel Hobby, function time is limited (~10s); large PDFs may need a higher limit (see `maxDuration` in `app/api/upload/route.ts`) or a Pro plan.
 
 ### `GET /api/documents`
 

@@ -5,6 +5,8 @@ export interface Document {
   pageCount: number;
   chunkCount: number;
   status: 'processing' | 'ready' | 'failed';
+  /** Set when `status` is `failed` (e.g. PDF parse, HF API, or LanceDB error). */
+  errorMessage?: string;
 }
 
 export interface ChunkMetadata {
