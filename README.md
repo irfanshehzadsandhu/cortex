@@ -29,7 +29,7 @@ nvm use
 - Framework: Next.js 16, React 19, TypeScript
 - Vector DB: LanceDB (local `data/lancedb`, or `/tmp` on Vercel)
 - PDF parsing: `pdf-parse`
-- Chunking: LangChain `RecursiveCharacterTextSplitter`
+- Chunking: in-repo recursive character splitter (same separator order as LangChain defaults)
 - Embeddings & LLM: `@huggingface/inference`
 - Document metadata (Vercel / multi-instance): **Upstash Redis** via `@upstash/redis`
 
