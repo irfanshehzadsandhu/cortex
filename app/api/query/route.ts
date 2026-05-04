@@ -3,6 +3,22 @@ import { retrieve } from '../../../src/lib/rag/retriever';
 import { generateAnswer } from '../../../src/lib/rag/generator';
 import { listDocuments } from '../../../src/lib/document-store';
 import { getVectorStorageBackend, getVectorStoreStats } from '../../../src/lib/rag/vector-store';
+import type { QueryResponse } from '../../../src/types';
+
+type QueryDebug = {
+  vectorBackend: 'redis';
+  totalVectorChunkIds: number;
+  filteredVectorChunkIds: number;
+  totalDocuments: number;
+  readyDocuments: number;
+  failedDocuments: number;
+  filteredDocumentIdsCount: number;
+  message: string;
+};
+
+type QueryRouteResponse = QueryResponse & {
+  debug?: QueryDebug;
+};
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as { query?: string; documentIds?: string[]; topK?: number };
@@ -14,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   const results = await retrieve(query.trim(), topK, documentIds);
-  const response = await generateAnswer(query.trim(), results) as Record<string, unknown>;
+  const response: QueryRouteResponse = await generateAnswer(query.trim(), results);
 
   if (results.length === 0) {
     const docs = await listDocuments();
