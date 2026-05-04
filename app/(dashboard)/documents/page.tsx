@@ -26,7 +26,7 @@ export default function DocumentsPage() {
   }, [refresh]);
 
   const deleteDoc = async (id: string) => {
-    await fetch(`/api/documents?id=${id}`, {
+    await fetch(`/api/documents/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       cache: 'no-store',
     });

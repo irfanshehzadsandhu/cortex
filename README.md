@@ -49,7 +49,8 @@ nvm use
 - `app/(dashboard)/chat/page.tsx`: Chat UI
 - `app/api/upload/route.ts`: Ingestion endpoint
 - `app/api/query/route.ts`: RAG query endpoint
-- `app/api/documents/route.ts`: List/delete documents
+- `app/api/documents/route.ts`: List documents (`GET`)
+- `app/api/documents/[id]/route.ts`: Delete document + vectors (`DELETE`)
 - `src/lib/rag/`: Parser, chunker, embedder, retriever, generator, vector store
 - `src/lib/document-store.ts`: Document metadata (in-memory locally, **Upstash Redis** when env is set)
 
@@ -124,9 +125,9 @@ The same error is stored on the document as `errorMessage` for the list UI. On V
 
 List all uploaded document metadata.
 
-### `DELETE /api/documents?id=<documentId>`
+### `DELETE /api/documents/<documentId>`
 
-Delete document metadata and vectors for one document.
+Delete document metadata and vectors for one document (path segment, URL-encoded id).
 
 ### `POST /api/query`
 
