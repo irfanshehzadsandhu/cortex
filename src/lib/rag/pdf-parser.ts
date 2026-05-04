@@ -1,9 +1,12 @@
 import { PDFParse } from 'pdf-parse';
+import { CanvasFactory } from 'pdf-parse/worker';
 import type { ParsedPage, ParsedPDF } from '../../types';
 
 export async function parsePDF(buffer: Buffer, filename: string): Promise<ParsedPDF> {
   const data = new Uint8Array(buffer);
-  const parser = new PDFParse({ data });
+  // Node / Vercel: without CanvasFactory, pdfjs may use browser-only globals (e.g. DOMMatrix).
+  // See https://github.com/mehmet-kozan/pdf-parse/blob/main/docs/troubleshooting.md
+  const parser = new PDFParse({ data, CanvasFactory });
 
   const info = await parser.getInfo();
   const result = await parser.getText({ pageJoiner: '' });
