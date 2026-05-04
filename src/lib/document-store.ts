@@ -1,9 +1,6 @@
 import { Redis } from '@upstash/redis';
 import type { Document } from '../types';
 
-/** In-memory fallback for local dev only — not shared across Vercel instances. */
-const memoryStore = new Map<string, Document>();
-
 const IDS_KEY = 'cortex:document_ids';
 const docKey = (id: string) => `cortex:document:${id}`;
 
@@ -16,13 +13,20 @@ function redisToken(): string | undefined {
   return process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 }
 
-function useKv(): boolean {
-  return Boolean(redisUrl()?.length && redisToken()?.length);
+function getRedisConfig(): { url: string; token: string } {
+  const url = redisUrl();
+  const token = redisToken();
+  if (!url || !token) {
+    throw new Error(
+      'Document store requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or legacy KV_REST_API_URL/KV_REST_API_TOKEN).',
+    );
+  }
+  return { url, token };
 }
 
-/** Whether metadata is shared across instances (`redis`) or process-local (`memory`). */
-export function getDocumentStorageBackend(): 'redis' | 'memory' {
-  return useKv() ? 'redis' : 'memory';
+/** Metadata storage backend is always Redis. */
+export function getDocumentStorageBackend(): 'redis' {
+  return 'redis';
 }
 
 let cachedRedis: Redis | null = null;
@@ -46,11 +50,7 @@ function assertValidUpstashRestUrl(url: string): void {
 
 function getRedis(): Redis {
   if (cachedRedis) return cachedRedis;
-  const url = redisUrl();
-  const token = redisToken();
-  if (!url || !token) {
-    throw new Error('Redis URL/token missing');
-  }
+  const { url, token } = getRedisConfig();
   assertValidUpstashRestUrl(url);
   cachedRedis = new Redis({ url, token });
   return cachedRedis;
@@ -84,69 +84,49 @@ function parseStoredDocument(raw: unknown): Document {
 }
 
 export async function saveDocument(doc: Document): Promise<void> {
-  if (useKv()) {
-    const redis = getRedis();
-    await redis.set(docKey(doc.id), serialize(doc));
-    await redis.sadd(IDS_KEY, doc.id);
-    return;
-  }
-  memoryStore.set(doc.id, doc);
+  const redis = getRedis();
+  await redis.set(docKey(doc.id), serialize(doc));
+  await redis.sadd(IDS_KEY, doc.id);
 }
 
 export async function getDocument(id: string): Promise<Document | undefined> {
-  if (useKv()) {
-    const redis = getRedis();
-    const raw = await redis.get(docKey(id));
-    return raw != null ? parseStoredDocument(raw) : undefined;
-  }
-  return memoryStore.get(id);
+  const redis = getRedis();
+  const raw = await redis.get(docKey(id));
+  return raw != null ? parseStoredDocument(raw) : undefined;
 }
 
 export async function listDocuments(): Promise<Document[]> {
-  if (useKv()) {
-    const redis = getRedis();
-    const ids = await redis.smembers(IDS_KEY);
-    if (!ids.length) return [];
-    const docs: Document[] = [];
-    for (const id of ids) {
-      const raw = await redis.get(docKey(id));
-      if (raw != null) docs.push(parseStoredDocument(raw));
-    }
-    return docs.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
+  const redis = getRedis();
+  const ids = await redis.smembers(IDS_KEY);
+  if (!ids.length) return [];
+  const docs: Document[] = [];
+  for (const id of ids) {
+    const raw = await redis.get(docKey(id));
+    if (raw != null) docs.push(parseStoredDocument(raw));
   }
-  return Array.from(memoryStore.values()).sort(
-    (a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime()
-  );
+  return docs.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
 }
 
 export async function updateDocument(id: string, patch: Partial<Document>): Promise<void> {
-  if (useKv()) {
-    const redis = getRedis();
-    const raw = await redis.get(docKey(id));
-    if (raw == null) return;
-    const doc = parseStoredDocument(raw);
-    await redis.set(
-      docKey(id),
-      serialize({
-        ...doc,
-        ...patch,
-        uploadedAt: patch.uploadedAt ?? doc.uploadedAt,
-      })
-    );
-    return;
-  }
-  const doc = memoryStore.get(id);
-  if (doc) memoryStore.set(id, { ...doc, ...patch });
+  const redis = getRedis();
+  const raw = await redis.get(docKey(id));
+  if (raw == null) return;
+  const doc = parseStoredDocument(raw);
+  await redis.set(
+    docKey(id),
+    serialize({
+      ...doc,
+      ...patch,
+      uploadedAt: patch.uploadedAt ?? doc.uploadedAt,
+    })
+  );
 }
 
 export async function deleteDocument(id: string): Promise<boolean> {
-  if (useKv()) {
-    const redis = getRedis();
-    const existed = await redis.get(docKey(id));
-    if (!existed) return false;
-    await redis.del(docKey(id));
-    await redis.srem(IDS_KEY, id);
-    return true;
-  }
-  return memoryStore.delete(id);
+  const redis = getRedis();
+  const existed = await redis.get(docKey(id));
+  if (!existed) return false;
+  await redis.del(docKey(id));
+  await redis.srem(IDS_KEY, id);
+  return true;
 }

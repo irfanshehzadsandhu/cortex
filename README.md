@@ -27,7 +27,7 @@ nvm use
 ## Tech Stack
 
 - Framework: Next.js 16, React 19, TypeScript
-- Vector DB: LanceDB (local `data/lancedb`, or `/tmp` on Vercel)
+- Vector DB: Redis-backed vector store (Upstash)
 - PDF parsing: `pdf-parse`
 - Chunking: in-repo recursive character splitter (same separator order as LangChain defaults)
 - Embeddings & LLM: `@huggingface/inference`
@@ -99,7 +99,8 @@ Open [http://localhost:3000](http://localhost:3000). Without Upstash env vars, m
 ### Vercel runtime notes
 
 - **Document metadata** is durable across instances when Upstash env vars are set.
-- **LanceDB vectors** on Vercel use `/tmp` per instance and are ephemeral; chat retrieval may miss chunks if upload and query hit different instances. For a portfolio, low traffic often masks this; for reliable RAG on serverless, use a hosted vector DB (e.g. pgvector, Pinecone).
+- **Vectors on Vercel**: Cortex stores chunk vectors in Redis so retrieval remains consistent across serverless instances.
+- **Redis is required** for vector storage; uploads/queries fail fast if Upstash REST env vars are missing.
 
 ## API Endpoints
 

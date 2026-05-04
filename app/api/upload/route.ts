@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         status: finalStatus,
         ...(errorMessage ? { error: errorMessage } : {}),
       },
-      { status: 200 },
+      { status: finalStatus === 'failed' ? 500 : 200 },
     );
     res.headers.set('X-Cortex-Document-Backend', getDocumentStorageBackend());
     return res;
